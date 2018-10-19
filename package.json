@@ -1,0 +1,26 @@
+{
+  "name": "trelmo",
+  "version": "1.0.0",
+  "description": "A Trello-like app written to learn Elm.",
+  "main": "index.js",
+  "scripts": {
+    "dev": "npm run copy-index-html && concurrently \"npm run elm-dev\" \"npm run less-dev\" \"npm run serve\" ",
+    "serve": "cd dist && ws --spa index.html",
+    "less-dev": "chokidar \"src/less/*.less\" -c \"npm run build-less\" ",
+    "build-less": "lessc src/less/index.less dist/css/main.css",
+    "elm-dev": "chokidar \"src/*.elm\" -c \"npm run build-elm\" ",
+    "build-elm": "elm make --output dist/main.js src/Main.elm",
+    "build": "npm run copy-index-html && npm run build-elm && npm run build-less && npm run copy-index-html",
+    "copy-index-html": "copyfiles -u 1 src/index.html dist"
+  },
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "chokidar-cli": "^1.2.0",
+    "concurrently": "^4.0.0",
+    "copyfiles": "^2.1.0",
+    "elm": "^0.19.0-bugfix2",
+    "less": "^3.8.1",
+    "local-web-server": "^2.6.0"
+  }
+}

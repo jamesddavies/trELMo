@@ -1,0 +1,131 @@
+.title {
+    line-height: 2;
+}
+
+.navbar {
+    margin-bottom: 1.25rem;
+}
+
+.button .icon {
+    font-size: 0.8rem;
+}
+
+.padding-sides {
+    padding: 0 1.5rem;
+}
+
+.box-shadow {
+    box-shadow: 0 1px 8px rgba(0,0,0,0.16);
+}
+
+input {
+    border: none;
+    background: none;
+    margin: 0;
+    width: 100%;
+    padding: 0;
+    &::placeholder {
+        color: inherit;
+    }
+    &:focus {
+        outline: none;
+        &::placeholder {
+            opacity: 0;
+        }
+    }
+    &.title-input {
+        color: #fff;
+        font-size: 1.4rem;
+        font-weight: bold;
+        margin-bottom: 0.5rem;
+    }
+    &.description-input {
+        color: #fff;
+        font-size: 0.8rem;
+    }
+}
+
+textarea {
+    border: none;
+    background: none;
+    margin: 0;
+    width: 100%;
+    padding: 0;
+    resize: none;
+    &::placeholder {
+        color: inherit;
+    }
+    &:focus {
+        outline: none;
+        &::placeholder {
+            opacity: 0;
+        }
+    }
+}
+
+.progress {
+    margin: 1rem 0 1.3rem 0!important;
+    height: 0.3rem;
+}
+
+.todo-area {
+    width: 100%;
+    background-color: #FFFFF0;
+    color: #222;
+    
+    .todo-item {
+        display: flex;
+        align-items: flex-start;
+        justify-content: flex-start;
+        border-bottom: 1px solid #cecece;
+        padding: 0.5rem;
+        &.complete {
+            opacity: 0.7;
+            background-color: #dedede;
+        }
+        .icon-container {
+            padding-top: 2px;
+            width: 6%;
+            .active {
+                cursor: pointer;
+            }
+        }
+        .content-container {
+            margin-left: 12px;
+            text-align: left;
+            width: 88%;
+            .item-title {
+                font-size: 0.9rem;
+                font-weight: bold;
+            }
+            .item-description {
+                font-size: 0.7rem;
+            }
+        }
+        .delete-container {
+            width: 6%;
+            padding-top: 2px;
+            .icon {
+                cursor: pointer;
+            }
+        }
+        &:last-child {
+            border-bottom: none;
+        }
+    }
+}
+
+.add-todo {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    margin-top: 1rem;
+    font-size: 0.8rem;
+    div {
+        cursor: pointer;
+    }
+    span {
+        cursor: pointer;
+        padding-left: 12px;
+    }
+}
