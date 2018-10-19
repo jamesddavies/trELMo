@@ -99,7 +99,7 @@ newCard n =
     { items = [
         { title = ""
         , description = ""
-        , id = n
+        , id = 0
         , status = Active
         }
     ]
