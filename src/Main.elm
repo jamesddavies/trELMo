@@ -166,6 +166,18 @@ getNewId list =
         Nothing ->
             0
 
+isComplete : ItemStatus -> Bool
+isComplete status =
+    case status of
+        Active ->
+            False
+        Completed ->
+            True
+        Archived ->
+            False
+
+getCompleteItems list =
+    List.filter (\i -> (isComplete i.status)) list
 
 -- SUBSCRIPTIONS
 
@@ -208,8 +220,7 @@ cardsView cardList =
 cardView cardData =
     div [ class "column is-4" ] [ 
         div [ class "box has-background-primary has-text-centered fade-in" ] [
-            span [] [ text (String.fromInt cardData.id) ]
-            , input [ class "title-input", value cardData.title, placeholder "Card title", (onInput (UpdateCardTitle cardData.id)) ] []
+            input [ class "title-input", value cardData.title, placeholder "Card title", (onInput (UpdateCardTitle cardData.id)) ] []
             , input [ class "description-input", value cardData.description, placeholder "Add a description...", (onInput (UpdateCardDescription cardData.id)) ] []
             , progress [ classList [ ("progress", True), ("is-info", (itemsCompletePercentage cardData.items) /= "100"), ("is-success box-shadow", (itemsCompletePercentage cardData.items) == "100") ], value (itemsCompletePercentage cardData.items), Html.Attributes.max "100" ] []
             , div [ class "todo-area" ] 
@@ -233,8 +244,7 @@ listItemView item cardId =
             span [ class "icon is-small", onClick (CompleteItem cardId item.id) ] [ i [ class (listItemIcon item.status) ] [] ]
         ]
         , div [ class "content-container" ] [
-            span [] [ text (String.fromInt item.id) ]
-            ,input [ class "item-title", value item.title, placeholder "New item", (onInput (UpdateItemTitle item.id cardId)) ] []
+            input [ class "item-title", value item.title, placeholder "New item", (onInput (UpdateItemTitle item.id cardId)) ] []
             , textarea [ class "item-description", placeholder "Add a description...", (onInput (UpdateItemDescription item.id cardId)) ] [ text item.description ]
         ]
         , div [ class "delete-container"] [
@@ -252,21 +262,5 @@ listItemIcon status =
         Archived ->
             "fas fa-archive has-text-grey-light archived"
 
-isComplete : ItemStatus -> Bool
-isComplete status =
-    case status of
-        Active ->
-            False
-        Completed ->
-            True
-        Archived ->
-            False
-
 itemsCompletePercentage items =
-    let
-        completedCount = (List.length (List.filter (\i -> (isComplete i.status)) items))
-    in
-        if completedCount == 0 then
-            "0"
-        else
-            String.fromFloat (((toFloat completedCount) / toFloat (List.length items)) * 100)
+   String.fromFloat (((toFloat (List.length (getCompleteItems items))) / toFloat (List.length items)) * 100)
