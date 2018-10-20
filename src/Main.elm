@@ -5,6 +5,8 @@ import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (..)
 import String
+import Dict
+import Tuple
 
 -- MAIN
 
@@ -19,21 +21,19 @@ main =
 -- MODEL
 
 type alias Model = 
-    { cards : List Card
+    { cards : Dict.Dict Int Card
     }
 
 type alias Card = 
-    { items : List Item
+    { items : Dict.Dict Int Item
     , title : String
     , description: String
-    , id : Int
     , status : ItemStatus
     }
 
 type alias Item = 
     { title : String
     , description: String
-    , id : Int
     , status : ItemStatus
     }
 
@@ -42,7 +42,7 @@ type ItemStatus = Active | Completed | Archived
 
 init : () -> (Model, Cmd Msg)
 init _ = 
-    ( Model []
+    ( Model Dict.empty
     , Cmd.none
     )
 
@@ -63,93 +63,111 @@ update : Msg -> Model -> (Model, Cmd Msg)
 update msg model =
     case msg of
         AddCard ->
-            ( { model | cards = List.append model.cards [newCard (getNewId model.cards)]}
+            --( { model | cards = List.append model.cards [newCard (getNewId model.cards)]}
+            ( { model | cards = Dict.insert (getNewId model.cards) newCard model.cards }
             , Cmd.none
             )
         DeleteCard id ->
-            ( { model | cards = List.filter (\card -> card.id /= id) model.cards}
+            ( { model | cards = Dict.remove id model.cards }
             , Cmd.none
             )
-        AddItem newId ->
-            ( { model | cards = mapCards model.cards newId addItem }
+        AddItem cardId ->
+            ( { model | cards = Dict.update cardId (itemUpdater addItem (-1)) model.cards }
             , Cmd.none
             )
         CompleteItem cardId itemId ->
-            ( { model | cards = mapItems model.cards cardId itemId completeItem }
+            ( { model | cards = Dict.update cardId (itemUpdater completeItem itemId) model.cards }
             , Cmd.none
             )
         DeleteItem cardId itemId ->
-            ( { model | cards = mapItems model.cards cardId itemId deleteItem }
+            ( { model | cards = Dict.update cardId (itemUpdater deleteItem itemId) model.cards }
             , Cmd.none
             )
         UpdateCardTitle cardId title ->
-            ( { model | cards = (mapCardsParam model.cards cardId updateTitle title)}
+            ( { model | cards = Dict.update cardId (cardUpdater updateTitle title) model.cards }
             , Cmd.none
             )
         UpdateCardDescription cardId description ->
-            ( { model | cards = (mapCardsParam model.cards cardId updateDescription description)}
+            ( { model | cards = Dict.update cardId (cardUpdater updateDescription description) model.cards }
             , Cmd.none
             )
         UpdateItemTitle itemId cardId title ->
-            ( { model | cards = (mapItemsParam model.cards cardId itemId updateTitle title)}
+            ( { model | cards = Dict.update cardId (itemFieldUpdater updateItemTitle itemId title) model.cards }
             , Cmd.none
             )
         UpdateItemDescription itemId cardId description ->
-            ( { model | cards = (mapItemsParam model.cards cardId itemId updateDescription description)}
+            ( { model | cards = Dict.update cardId (itemFieldUpdater updateItemDescription itemId description) model.cards }
             , Cmd.none
             )
 
-newCard : Int -> Card
-newCard n =
-    { items = [
-        { title = ""
-        , description = ""
-        , id = 0
-        , status = Active
-        }
-    ]
+newCard : Card
+newCard =
+    { items = (Dict.singleton 0 newItem)
     , title = ""
     , description = ""
-    , id = n
     , status = Active
     }
 
-newItem : Int -> Item
-newItem n = 
+newItem : Item
+newItem = 
     { title = ""
     , description = ""
-    , id = n
     , status = Active
     }
 
-mapCards cards id callback =
-    List.map (\card -> if card.id == id then callback card else card) cards
+cardUpdater callback content card =
+    case card of
+        Just a ->
+            Just (callback a content)
+        Nothing ->
+            card
 
-mapCardsParam cards id callback param =
-    List.map (\card -> if card.id == id then callback card param else card) cards
+itemUpdater callback itemId card =
+    case card of
+        Just a ->
+            if itemId < 0 then
+                Just { a | items = (callback (getNewId a.items)) a.items }
+            else
+                Just { a | items = (callback itemId) a.items }
+        Nothing ->
+            card
 
-mapItems cards cardId itemId callback =
-    List.map (\card -> if card.id == cardId then callback card itemId else card) cards
+itemFieldUpdater callback itemId field card =
+    case card of
+        Just a ->
+            Just { a | items = Dict.update itemId (callback field) a.items }
+        Nothing ->
+            card
 
-mapItemsParam cards cardId itemId callback param =
-    List.map (\card -> 
-        if card.id == cardId then 
-            { card | items = (List.map (\item -> if item.id == itemId then callback item param else item) card.items)}
-        else 
-            { card | items = card.items }
-    ) cards
+addItem itemId =
+    Dict.insert itemId newItem
 
-addItem : Card -> Card
-addItem card =
-    { card | items = List.append card.items [newItem (getNewId card.items)]}
+completeItem itemId =
+    Dict.update itemId (updateStatus Completed)
 
-completeItem : Card -> Int -> Card
-completeItem card itemId =
-    { card | items = (List.map (\item -> if item.id == itemId then { item | status = Completed } else item) card.items)}
+deleteItem itemId =
+    Dict.remove itemId
 
-deleteItem : Card -> Int -> Card
-deleteItem card itemId =
-    { card | items = (List.filter (\item -> item.id /= itemId) card.items)}
+updateStatus status item =
+    case item of
+        Just a ->
+            Just { a | status = status }
+        Nothing ->
+            item
+
+updateItemTitle title item =
+    case item of
+        Just a ->
+            Just { a | title = title }
+        Nothing ->
+            item
+
+updateItemDescription description item =
+    case item of
+        Just a ->
+            Just { a | description = description }
+        Nothing ->
+            item
 
 updateTitle a title =
     { a | title = title }
@@ -157,10 +175,10 @@ updateTitle a title =
 updateDescription a description =
     { a | description = description }
 
-getNewId list =
-    case List.head (List.reverse list) of
-        Just el ->
-            el.id + 1
+getNewId dict =
+    case List.head (List.reverse (Dict.toList dict)) of
+        Just (k, v) ->
+            k + 1
         Nothing ->
             0
 
@@ -175,7 +193,7 @@ isComplete status =
             False
 
 getCompleteItems list =
-    List.filter (\i -> (isComplete i.status)) list
+    List.filter (\i -> (isComplete (Tuple.second i).status)) list
 
 -- SUBSCRIPTIONS
 
@@ -190,7 +208,7 @@ view model =
     div [] [
         headerView
         , div [ class "container is-flid" ] [
-            (cardsView model.cards)
+            (cardsView (Dict.toList model.cards))
         ]
     ]
 
@@ -216,37 +234,47 @@ cardsView cardList =
         (List.map (\cardData -> (cardView cardData)) cardList)
 
 cardView cardData =
+    let
+        id = Tuple.first cardData
+        card = Tuple.second cardData
+    in
+    
     div [ class "column is-4" ] [ 
         div [ class "box has-background-primary has-text-centered fade-in" ] [
-            input [ class "title-input", value cardData.title, placeholder "Card title", (onInput (UpdateCardTitle cardData.id)) ] []
-            , input [ class "description-input", value cardData.description, placeholder "Add a description...", (onInput (UpdateCardDescription cardData.id)) ] []
-            , progress [ classList [ ("progress", True), ("is-info", (itemsCompletePercentage cardData.items) /= "100"), ("is-success box-shadow", (itemsCompletePercentage cardData.items) == "100") ], value (itemsCompletePercentage cardData.items), Html.Attributes.max "100" ] []
+            input [ class "title-input", value card.title, placeholder "Card title", (onInput (UpdateCardTitle id)) ] []
+            , input [ class "description-input", value card.description, placeholder "Add a description...", (onInput (UpdateCardDescription id)) ] []
+            , progress [ classList [ ("progress", True), ("is-info", (itemsCompletePercentage card.items) /= "100"), ("is-success box-shadow", (itemsCompletePercentage card.items) == "100") ], value (itemsCompletePercentage card.items), Html.Attributes.max "100" ] []
             , div [ class "todo-area" ] 
-                (List.map (\item -> (listItemView item cardData.id)) cardData.items)
+                (List.map (\item -> (listItemView item id)) (Dict.toList card.items))
             , div [ class "card-bottom has-text-white" ] [
                 div [ class "delete-card" ] [
-                    span [ class "icon is-small", onClick (DeleteCard cardData.id) ] [ i [ class "fas fa-trash-alt" ] [] ]
+                    span [ class "icon is-small", onClick (DeleteCard id) ] [ i [ class "fas fa-trash-alt" ] [] ]
                 ]
                 , div [ class "add-todo" ] [
-                    div [ class "has-text-white", onClick (AddItem cardData.id) ] [ text "Add a new item" ]
-                    , span [ class "icon is-small", onClick (AddItem cardData.id) ] [ i [ class "fas fa-plus"] [] ]
+                    div [ class "has-text-white", onClick (AddItem id) ] [ text "Add a new item" ]
+                    , span [ class "icon is-small", onClick (AddItem id) ] [ i [ class "fas fa-plus"] [] ]
                 ]
             ]
         ]
     ]
 
-listItemView : Item -> Int -> Html Msg
-listItemView item cardId =
+--listItemView : Item -> Int -> Html Msg
+listItemView itemData cardId =
+    let
+        itemId = Tuple.first itemData
+        item = Tuple.second itemData
+    in
+        
     div [ classList [ ("todo-item", True), ("fade-in", True), ("complete", (isComplete item.status))] ] [
         div [ class "icon-container" ] [
-            span [ class "icon is-small", onClick (CompleteItem cardId item.id) ] [ i [ class (listItemIcon item.status) ] [] ]
+            span [ class "icon is-small", onClick (CompleteItem cardId itemId) ] [ i [ class (listItemIcon item.status) ] [] ]
         ]
         , div [ class "content-container" ] [
-            input [ class "item-title", value item.title, placeholder "New item", (onInput (UpdateItemTitle item.id cardId)) ] []
-            , textarea [ class "item-description", placeholder "Add a description...", (onInput (UpdateItemDescription item.id cardId)) ] [ text item.description ]
+            input [ class "item-title", value item.title, placeholder "New item", (onInput (UpdateItemTitle itemId cardId)) ] []
+            , textarea [ class "item-description", placeholder "Add a description...", (onInput (UpdateItemDescription itemId cardId)) ] [ text item.description ]
         ]
         , div [ class "delete-container"] [
-            span [ class "icon is-small", onClick (DeleteItem cardId item.id) ] [ i [ class "fas fa-trash-alt has-text-danger" ] [] ]
+            span [ class "icon is-small", onClick (DeleteItem cardId itemId) ] [ i [ class "fas fa-trash-alt has-text-danger" ] [] ]
         ]
     ]
 
@@ -260,5 +288,9 @@ listItemIcon status =
         Archived ->
             "fas fa-archive has-text-grey-light archived"
 
-itemsCompletePercentage items =
-   String.fromFloat (((toFloat (List.length (getCompleteItems items))) / toFloat (List.length items)) * 100)
+itemsCompletePercentage itemsDict =
+    let
+        items = Dict.toList itemsDict
+    in
+    
+    String.fromFloat (((toFloat (List.length (getCompleteItems items))) / toFloat (List.length items)) * 100)
