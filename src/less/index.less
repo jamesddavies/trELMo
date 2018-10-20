@@ -1,3 +1,5 @@
+@transition-speed: 300ms;
+
 .title {
     line-height: 2;
 }
@@ -115,17 +117,38 @@ textarea {
     }
 }
 
-.add-todo {
+.card-bottom {
     display: flex;
     align-items: center;
-    justify-content: flex-end;
+    justify-content: space-between;
     margin-top: 1rem;
     font-size: 0.8rem;
-    div {
+    .delete-card {
         cursor: pointer;
+        transition: all @transition-speed ease-out;
+        &:hover {
+            color: hsl(348, 100%, 61%);
+        }
     }
-    span {
+    .add-todo {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
         cursor: pointer;
-        padding-left: 12px;
+        span {
+            padding-left: 12px;
+        }
     }
+}
+
+@keyframes fadein {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.fade-in {
+    animation-name: fadein;
+    animation-duration: @transition-speed;
+    animation-iteration-count: 1;
+    animation-timing-function: ease-out;
 }

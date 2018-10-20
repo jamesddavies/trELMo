@@ -5,6 +5,8 @@ import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (..)
 import String
+import Time
+import Task
 
 -- MAIN
 
@@ -50,6 +52,7 @@ init _ =
 
 type Msg
     = AddCard
+    | DeleteCard Int
     | AddItem Int
     | CompleteItem Int Int
     | DeleteItem Int Int
@@ -62,35 +65,39 @@ update : Msg -> Model -> (Model, Cmd Msg)
 update msg model =
     case msg of
         AddCard ->
-            ( { model | cards = List.append model.cards [newCard (List.length model.cards)]}
+            ( { model | cards = List.append model.cards [newCard (getNewId model.cards)]}
             , Cmd.none
             )
-        AddItem n ->
-            ( { model | cards = mapCards model.cards n addItem }
+        DeleteCard id ->
+            ( { model | cards = List.filter (\card -> card.id /= id) model.cards}
             , Cmd.none
             )
-        CompleteItem cardid itemid ->
-            ( { model | cards = mapItems model.cards cardid itemid completeItem }
+        AddItem newId ->
+            ( { model | cards = mapCards model.cards newId addItem }
             , Cmd.none
             )
-        DeleteItem cardid itemid ->
-            ( { model | cards = mapItems model.cards cardid itemid deleteItem }
+        CompleteItem cardId itemId ->
+            ( { model | cards = mapItems model.cards cardId itemId completeItem }
             , Cmd.none
             )
-        UpdateCardTitle cardid title ->
-            ( { model | cards = (mapCardsParam model.cards cardid updateTitle title)}
+        DeleteItem cardId itemId ->
+            ( { model | cards = mapItems model.cards cardId itemId deleteItem }
             , Cmd.none
             )
-        UpdateCardDescription cardid description ->
-            ( { model | cards = (mapCardsParam model.cards cardid updateDescription description)}
+        UpdateCardTitle cardId title ->
+            ( { model | cards = (mapCardsParam model.cards cardId updateTitle title)}
             , Cmd.none
             )
-        UpdateItemTitle itemid cardid title ->
-            ( { model | cards = (mapItemsParam model.cards cardid itemid updateTitle title)}
+        UpdateCardDescription cardId description ->
+            ( { model | cards = (mapCardsParam model.cards cardId updateDescription description)}
             , Cmd.none
             )
-        UpdateItemDescription itemid cardid description ->
-            ( { model | cards = (mapItemsParam model.cards cardid itemid updateDescription description)}
+        UpdateItemTitle itemId cardId title ->
+            ( { model | cards = (mapItemsParam model.cards cardId itemId updateTitle title)}
+            , Cmd.none
+            )
+        UpdateItemDescription itemId cardId description ->
+            ( { model | cards = (mapItemsParam model.cards cardId itemId updateDescription description)}
             , Cmd.none
             )
 
@@ -123,34 +130,42 @@ mapCards cards id callback =
 mapCardsParam cards id callback param =
     List.map (\card -> if card.id == id then callback card param else card) cards
 
-mapItems cards cardid itemid callback =
-    List.map (\card -> if card.id == cardid then callback card itemid else card) cards
+mapItems cards cardId itemId callback =
+    List.map (\card -> if card.id == cardId then callback card itemId else card) cards
 
-mapItemsParam cards cardid itemid callback param =
+mapItemsParam cards cardId itemId callback param =
     List.map (\card -> 
-        if card.id == cardid then 
-            { card | items = (List.map (\item -> if item.id == itemid then callback item param else item) card.items)}
+        if card.id == cardId then 
+            { card | items = (List.map (\item -> if item.id == itemId then callback item param else item) card.items)}
         else 
             { card | items = card.items }
     ) cards
 
 addItem : Card -> Card
 addItem card =
-    { card | items = List.append card.items [newItem (List.length card.items)]}
+    { card | items = List.append card.items [newItem (getNewId card.items)]}
 
 completeItem : Card -> Int -> Card
-completeItem card itemid =
-    { card | items = (List.map (\item -> if item.id == itemid then { item | status = Completed } else item) card.items)}
+completeItem card itemId =
+    { card | items = (List.map (\item -> if item.id == itemId then { item | status = Completed } else item) card.items)}
 
 deleteItem : Card -> Int -> Card
-deleteItem card itemid =
-    { card | items = (List.filter (\item -> item.id /= itemid) card.items)}
+deleteItem card itemId =
+    { card | items = (List.filter (\item -> item.id /= itemId) card.items)}
 
 updateTitle a title =
     { a | title = title }
 
 updateDescription a description =
     { a | description = description }
+
+getNewId list =
+    case List.head (List.reverse list) of
+        Just el ->
+            el.id + 1
+        Nothing ->
+            0
+
 
 -- SUBSCRIPTIONS
 
@@ -192,31 +207,38 @@ cardsView cardList =
 
 cardView cardData =
     div [ class "column is-4" ] [ 
-        div [ class "box has-background-primary has-text-centered" ] [
-            input [ class "title-input", value cardData.title, placeholder "Card title", (onInput (UpdateCardTitle cardData.id)) ] []
+        div [ class "box has-background-primary has-text-centered fade-in" ] [
+            span [] [ text (String.fromInt cardData.id) ]
+            , input [ class "title-input", value cardData.title, placeholder "Card title", (onInput (UpdateCardTitle cardData.id)) ] []
             , input [ class "description-input", value cardData.description, placeholder "Add a description...", (onInput (UpdateCardDescription cardData.id)) ] []
             , progress [ classList [ ("progress", True), ("is-info", (itemsCompletePercentage cardData.items) /= "100"), ("is-success box-shadow", (itemsCompletePercentage cardData.items) == "100") ], value (itemsCompletePercentage cardData.items), Html.Attributes.max "100" ] []
             , div [ class "todo-area" ] 
                 (List.map (\item -> (listItemView item cardData.id)) cardData.items)
-            , div [ class "add-todo has-text-white" ] [
-                div [ class "has-text-white", onClick (AddItem cardData.id) ] [ text "Add a new item" ]
-                , span [ class "icon is-small", onClick (AddItem cardData.id) ] [ i [ class "fas fa-plus"] [] ]
+            , div [ class "card-bottom has-text-white" ] [
+                div [ class "delete-card" ] [
+                    span [ class "icon is-small", onClick (DeleteCard cardData.id) ] [ i [ class "fas fa-trash-alt" ] [] ]
+                ]
+                , div [ class "add-todo" ] [
+                    div [ class "has-text-white", onClick (AddItem cardData.id) ] [ text "Add a new item" ]
+                    , span [ class "icon is-small", onClick (AddItem cardData.id) ] [ i [ class "fas fa-plus"] [] ]
+                ]
             ]
         ]
     ]
 
 listItemView : Item -> Int -> Html Msg
-listItemView item cardid =
-    div [ classList [ ("todo-item", True), ("complete", (isComplete item.status))] ] [
+listItemView item cardId =
+    div [ classList [ ("todo-item", True), ("fade-in", True), ("complete", (isComplete item.status))] ] [
         div [ class "icon-container" ] [
-            span [ class "icon is-small", onClick (CompleteItem cardid item.id) ] [ i [ class (listItemIcon item.status) ] [] ]
+            span [ class "icon is-small", onClick (CompleteItem cardId item.id) ] [ i [ class (listItemIcon item.status) ] [] ]
         ]
         , div [ class "content-container" ] [
-            input [ class "item-title", value item.title, placeholder "New item", (onInput (UpdateItemTitle item.id cardid)) ] []
-            , textarea [ class "item-description", placeholder "Add a description...", (onInput (UpdateItemDescription item.id cardid)) ] [ text item.description ]
+            span [] [ text (String.fromInt item.id) ]
+            ,input [ class "item-title", value item.title, placeholder "New item", (onInput (UpdateItemTitle item.id cardId)) ] []
+            , textarea [ class "item-description", placeholder "Add a description...", (onInput (UpdateItemDescription item.id cardId)) ] [ text item.description ]
         ]
         , div [ class "delete-container"] [
-            span [ class "icon is-small", onClick (DeleteItem cardid item.id) ] [ i [ class "fas fa-trash-alt has-text-danger" ] [] ]
+            span [ class "icon is-small", onClick (DeleteItem cardId item.id) ] [ i [ class "fas fa-trash-alt has-text-danger" ] [] ]
         ]
     ]
 
