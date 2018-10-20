@@ -28,16 +28,16 @@ type alias Card =
     { items : Dict.Dict Int Item
     , title : String
     , description: String
-    , status : ItemStatus
+    , active : Bool
+    , completed : Bool
     }
 
 type alias Item = 
     { title : String
     , description: String
-    , status : ItemStatus
+    , active : Bool
+    , completed : Bool
     }
-
-type ItemStatus = Active | Completed | Archived
 
 
 init : () -> (Model, Cmd Msg)
@@ -52,7 +52,7 @@ type Msg
     = AddCard
     | DeleteCard Int
     | AddItem Int
-    | CompleteItem Int Int
+    | ToggleComplete Int Int
     | DeleteItem Int Int
     | UpdateCardTitle Int String
     | UpdateCardDescription Int String
@@ -75,7 +75,7 @@ update msg model =
             ( { model | cards = Dict.update cardId (itemUpdater addItem (-1)) model.cards }
             , Cmd.none
             )
-        CompleteItem cardId itemId ->
+        ToggleComplete cardId itemId ->
             ( { model | cards = Dict.update cardId (itemUpdater completeItem itemId) model.cards }
             , Cmd.none
             )
@@ -105,14 +105,16 @@ newCard =
     { items = (Dict.singleton 0 newItem)
     , title = ""
     , description = ""
-    , status = Active
+    , active = True
+    , completed = False
     }
 
 newItem : Item
 newItem = 
     { title = ""
     , description = ""
-    , status = Active
+    , active = True
+    , completed = False
     }
 
 cardUpdater callback content card =
@@ -143,15 +145,15 @@ addItem itemId =
     Dict.insert itemId newItem
 
 completeItem itemId =
-    Dict.update itemId (updateStatus Completed)
+    Dict.update itemId (updateCompletedStatus)
 
 deleteItem itemId =
     Dict.remove itemId
 
-updateStatus status item =
+updateCompletedStatus item =
     case item of
         Just a ->
-            Just { a | status = status }
+            Just { a | completed = not a.completed }
         Nothing ->
             item
 
@@ -182,18 +184,8 @@ getNewId dict =
         Nothing ->
             0
 
-isComplete : ItemStatus -> Bool
-isComplete status =
-    case status of
-        Active ->
-            False
-        Completed ->
-            True
-        Archived ->
-            False
-
 getCompleteItems list =
-    List.filter (\i -> (isComplete (Tuple.second i).status)) list
+    List.filter (\i -> (Tuple.second i).completed) list
 
 -- SUBSCRIPTIONS
 
@@ -265,9 +257,11 @@ listItemView itemData cardId =
         item = Tuple.second itemData
     in
         
-    div [ classList [ ("todo-item", True), ("fade-in", True), ("complete", (isComplete item.status))] ] [
+    div [ classList [ ("todo-item", True), ("fade-in", True), ("complete", (item.completed))] ] [
         div [ class "icon-container" ] [
-            span [ class "icon is-small", onClick (CompleteItem cardId itemId) ] [ i [ class (listItemIcon item.status) ] [] ]
+            span [ class "icon is-small", onClick (ToggleComplete cardId itemId) ] [ 
+                i [ class (listItemIcon (item.completed)) ] [] 
+            ]
         ]
         , div [ class "content-container" ] [
             input [ class "item-title", value item.title, placeholder "New item", (onInput (UpdateItemTitle itemId cardId)) ] []
@@ -278,15 +272,13 @@ listItemView itemData cardId =
         ]
     ]
 
-listItemIcon : ItemStatus -> String
+listItemIcon : Bool -> String
 listItemIcon status =
-    case status of
-        Active ->
-            "far fa-square has-text-link active"
-        Completed ->
-            "fas fa-check has-text-success completed"
-        Archived ->
-            "fas fa-archive has-text-grey-light archived"
+    if status then
+        "fas fa-check has-text-success completed"
+    else
+        "far fa-square has-text-link active"
+            
 
 itemsCompletePercentage itemsDict =
     let
