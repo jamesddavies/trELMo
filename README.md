@@ -3,3 +3,4 @@
 
 #### To-Do
 - Clean up update functions
+- Responsive design
