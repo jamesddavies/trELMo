@@ -331,6 +331,9 @@ listItemIcon status =
 itemsCompletePercentage itemsDict =
     let
         items = Dict.toList itemsDict
+
     in
-    
-    String.fromFloat (((toFloat (List.length (getCompleteItems items))) / toFloat (List.length items)) * 100)
+        if (List.length items) == 0 then
+            String.fromInt 0
+        else
+            String.fromFloat (((toFloat (List.length (getCompleteItems items))) / toFloat (List.length items)) * 100)
