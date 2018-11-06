@@ -6,17 +6,56 @@ import Html.Attributes exposing (..)
 import Html.Events exposing (..)
 import String
 import Dict
-import Tuple
 
 -- MAIN
 
 main =
     Browser.document
         { init = init
-        , update = update
+        , update = updateWithStorage
         , subscriptions = subscriptions
         , view = \model -> { title = "trELMo", body = [view model] }
         }
+
+port setStorage : EncodedModel -> Cmd msg
+
+updateWithStorage : Msg -> Model -> ( Model, Cmd Msg )
+updateWithStorage msg model =
+    let
+        ( newModel, cmds ) =
+            update msg model
+        _ = Debug.log "" (encodeModel newModel)
+    in
+        ( newModel
+        , Cmd.batch [ setStorage  (encodeModel newModel), cmds ]
+        )
+
+encodeModel : Model -> EncodedModel
+encodeModel model =
+    { cards = Dict.toList model.cards
+    |> List.map (\(k, v) -> 
+        (k, { items = (Dict.toList v.items)
+            , title = v.title
+            , description = v.description
+            , active = v.active
+            , completed = v.completed
+            }
+        ))
+    }
+
+decodeModel : EncodedModel -> Model
+decodeModel encodedModel =
+    { cards = encodedModel.cards
+    |> List.map (\(k, v) ->
+        (k, { items = (Dict.fromList v.items)
+        , title = v.title
+        , description = v.description
+        , active = v.active
+        , completed = v.completed
+        }
+    ))
+    |> Dict.fromList    
+    }
 
 -- MODEL
 
@@ -24,10 +63,22 @@ type alias Model =
     { cards : Dict.Dict Int Card
     }
 
+type alias EncodedModel = 
+    { cards : List (Int, EncodedCard)
+    }
+
 type alias Card = 
     { items : Dict.Dict Int Item
     , title : String
     , description: String
+    , active : Bool
+    , completed : Bool
+    }
+
+type alias EncodedCard = 
+    { items: List (Int, Item)
+    , title : String
+    , description : String
     , active : Bool
     , completed : Bool
     }
@@ -39,9 +90,9 @@ type alias Item =
     , completed : Bool
     }
 
-init : () -> (Model, Cmd Msg)
-init _ = 
-    ( Model Dict.empty
+init : Maybe EncodedModel -> (Model, Cmd Msg)
+init encodedModel = 
+    ( (decodeModel (Maybe.withDefault { cards = [] } encodedModel))
     , Cmd.none
     )
 
@@ -197,7 +248,7 @@ view : Model -> Html Msg
 view model = 
     div [] [
         headerView
-        , div [ class "container is-flid" ] [
+        , div [ class "container is-fluid" ] [
             (cardsView (Dict.toList model.cards))
         ]
     ]
