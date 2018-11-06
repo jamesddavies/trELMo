@@ -39,7 +39,6 @@ type alias Item =
     , completed : Bool
     }
 
-
 init : () -> (Model, Cmd Msg)
 init _ = 
     ( Model Dict.empty
@@ -63,7 +62,6 @@ update : Msg -> Model -> (Model, Cmd Msg)
 update msg model =
     case msg of
         AddCard ->
-            --( { model | cards = List.append model.cards [newCard (getNewId model.cards)]}
             ( { model | cards = Dict.insert (getNewId model.cards) newCard model.cards }
             , Cmd.none
             )
@@ -84,11 +82,11 @@ update msg model =
             , Cmd.none
             )
         UpdateCardTitle cardId title ->
-            ( { model | cards = Dict.update cardId (cardUpdater updateTitle title) model.cards }
+            ( { model | cards = Dict.update cardId (Maybe.map <| updateTitle title) model.cards }
             , Cmd.none
             )
         UpdateCardDescription cardId description ->
-            ( { model | cards = Dict.update cardId (cardUpdater updateDescription description) model.cards }
+            ( { model | cards = Dict.update cardId (Maybe.map <| updateDescription description) model.cards }
             , Cmd.none
             )
         UpdateItemTitle itemId cardId title ->
@@ -171,10 +169,10 @@ updateItemDescription description item =
         Nothing ->
             item
 
-updateTitle a title =
+updateTitle title a =
     { a | title = title }
 
-updateDescription a description =
+updateDescription description a =
     { a | description = description }
 
 getNewId dict =
