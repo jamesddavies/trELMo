@@ -24,7 +24,6 @@ updateWithStorage msg model =
     let
         ( newModel, cmds ) =
             update msg model
-        _ = Debug.log "" (encodeModel newModel)
     in
         ( newModel
         , Cmd.batch [ setStorage  (encodeModel newModel), cmds ]
